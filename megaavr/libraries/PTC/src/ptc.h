@@ -117,15 +117,28 @@ typedef enum PTC_RSEL_enum {
   RSEL_VAL_200
 } ptc_rsel_t;
 
+// typedef enum ptc_gain_enum {
+  // PTC_GAIN_1            = 0x00,
+  // PTC_GAIN_2            = 0x23,
+  // PTC_GAIN_4            = 0x34,
+  // PTC_GAIN_8            = 0x3A,
+  // PTC_GAIN_16           = 0x3C,
+  // PTC_GAIN_32           = 0x3E,
+  // PTC_GAIN_MAX          = 0x3F,
+// } ptc_gain_t;
 typedef enum ptc_gain_enum {
-  PTC_GAIN_1            = 0x00,
-  PTC_GAIN_2            = 0x23,
-  PTC_GAIN_4            = 0x34,
-  PTC_GAIN_8            = 0x3A,
-  PTC_GAIN_16           = 0x3C,
-  PTC_GAIN_32           = 0x3E,
-  PTC_GAIN_MAX          = 0x3F,
+  PTC_GAIN_1,
+  PTC_GAIN_2,
+  PTC_GAIN_4,
+  PTC_GAIN_8,
+  PTC_GAIN_16,
+  PTC_GAIN_32,
+  PTC_GAIN_MAX,
 } ptc_gain_t;
+
+ const uint8_t ptc_again_lut[] = {
+    0x3F, 0x1C, 0x0B, 0x05, 0x03, 0x01,
+  };
 
 #elif defined (__PTC_DA__)
 typedef enum PTC_PRESC_enum {
@@ -150,14 +163,27 @@ typedef enum tag_rsel_val_t {
   RSEL_VAL_200
 } ptc_rsel_t;
 
+// typedef enum ptc_gain_enum {
+  // PTC_GAIN_1            = 0x00,
+  // PTC_GAIN_2            = 0x10,
+  // PTC_GAIN_4            = 0x18,
+  // PTC_GAIN_8            = 0x1C,
+  // PTC_GAIN_16           = 0x1E,
+  // PTC_GAIN_MAX          = 0x1F,
+// } ptc_gain_t;
+
 typedef enum ptc_gain_enum {
-  PTC_GAIN_1            = 0x00,
-  PTC_GAIN_2            = 0x10,
-  PTC_GAIN_4            = 0x18,
-  PTC_GAIN_8            = 0x1C,
-  PTC_GAIN_16           = 0x1E,
-  PTC_GAIN_MAX          = 0x1F,
+  PTC_GAIN_1,
+  PTC_GAIN_2,
+  PTC_GAIN_4,
+  PTC_GAIN_8,
+  PTC_GAIN_16,
+  PTC_GAIN_MAX,
 } ptc_gain_t;
+
+const uint8_t ptc_again_lut []  = {
+	 0x1F, 0x0F, 0x07, 0x03, 0x01
+};
 #endif
 
 typedef struct ptc_node_state_type {
@@ -230,6 +256,10 @@ typedef enum ptc_cb_event_enum {
   PTC_CB_EVENT_ERR_CALIB_HIGH     = (PTC_CB_EVENT_CONV_CALIB | 0x02),   // 0x42
   PTC_CB_EVENT_ERR_CALIB_TO       = (PTC_CB_EVENT_CONV_CALIB | 0x04),   // 0x44
   PTC_CB_EVENT_ERR_CALIB_MSK      = (0x04 | 0x02 | 0x01),               // 0x07
+  PTC_CB_EVENT_BEG_CALIB          = 0x80,
+  PTC_CB_EVENT_BEG_CALIB_LOW      = (PTC_CB_EVENT_BEG_CALIB  | 0x01),   // 0x81	when we spend too long in touch state
+  PTC_CB_EVENT_BEG_CALIB_FORCE    = (PTC_CB_EVENT_BEG_CALIB  | 0x02),   // 0x82	when the reference moved too far, try to move it back to the middle
+  PTC_CB_EVENT_BEG_CALIB_HIGH	  = (PTC_CB_EVENT_BEG_CALIB  | 0x04),   // 0x84 when the out of touch measured value was too low
 } ptc_cb_event_t;
 
 
@@ -435,7 +465,7 @@ inline uint8_t ptc_add_mutualcap_node(cap_sensor_t *node, const ptc_ch_bm_t xCh,
   const uint8_t tsize = sizeof(ptc_ch_arr_t);
   uint8_t pCh[tsize * 2];
 
-  pCh[0]          = (uint8_t)(xCh >>  0);
+  pCh[0]         = (uint8_t)(xCh >>  0);
   pCh[0 + tsize] = (uint8_t)(yCh >>  0);
 
   #if __PTC_Pincount__ >= 8

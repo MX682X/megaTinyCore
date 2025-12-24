@@ -235,7 +235,7 @@ void ptc_init_ADC0(void) {
   #else
   pPTC->CTRLC  =  ADC_PRESC_DIV2_gc | ADC_REFSEL_VDDREF_gc | ADC_SAMPCAP_bm;
   #endif
-  #if   (F_CPU == 6000000 || F_CPU == 12000000 || F_CPU == 24000000 || F_CPU ==25000000)
+  #if   (F_CPU == 6000000 || F_CPU == 12000000 || F_CPU == 24000000 || F_CPU == 25000000)
   pPTC->SAMPCTRL = (7);
   #elif (F_CPU == 5000000 || F_CPU == 10000000 || F_CPU == 20000000)
   pPTC->SAMPCTRL = (13);
@@ -269,8 +269,8 @@ uint8_t ptc_add_node(cap_sensor_t *node, uint8_t *pCh, const uint8_t type) {
   node->type = type;
 
   #if defined(__PTC_Tiny__)
-  ptc_ch_bm_t xCh = (ptc_ch_bm_t)pCh[0];
-  ptc_ch_bm_t yCh = (ptc_ch_bm_t)pCh[typesize];
+  ptc_ch_bm_t xCh = *(ptc_ch_bm_t*)&(pCh[0]);
+  ptc_ch_bm_t yCh = *(ptc_ch_bm_t*)&(pCh[typesize]);
   if ((xCh & yCh) != 0) {           /* overlap */
     return PTC_LIB_BAD_ARGUMENT;
   }
@@ -602,6 +602,7 @@ void ptc_process_node_sm(cap_sensor_t *node) {
       nodeSM = PTC_SM_NO_TOUCH;
     } else if (lastChange > 3) {
       nodeSM = PTC_SM_NOINIT_CAL;
+	  ptc_event_cb_calibration(PTC_CB_EVENT_BEG_CALIB_HIGH, node);	// calibration value too high, try to recalibrate
     }
 
 
@@ -623,8 +624,10 @@ void ptc_process_node_sm(cap_sensor_t *node) {
       nodeSM = PTC_SM_TOUCH_IN_FLT;
     } else if (reference <= (512 - ptc_sm_settings.force_recal_delta)) {
       nodeSM = PTC_SM_NOINIT_CAL;
+	  ptc_event_cb_calibration(PTC_CB_EVENT_BEG_CALIB_FORCE, node);
     } else if (reference >= (512 + ptc_sm_settings.force_recal_delta)) {
       nodeSM = PTC_SM_NOINIT_CAL;
+	  ptc_event_cb_calibration(PTC_CB_EVENT_BEG_CALIB_FORCE, node);
     } else if (nodeDelta < -1) {
       nodeSM = PTC_SM_NT_LOW_FLT;
     } else if (nodeDelta > 1) {
@@ -664,6 +667,7 @@ void ptc_process_node_sm(cap_sensor_t *node) {
   } else if (nodeSM == PTC_SM_TOUCH_DETECT) {
     if (lastChange > ptc_sm_settings.touched_max_nom) {
       nodeSM = PTC_SM_NOINIT_CAL;
+	  ptc_event_cb_calibration(PTC_CB_EVENT_BEG_CALIB_LOW, node);		// calibration value too low, try to recalibrate
     } else if (nodeDelta < node->touch_out_th) {
       nodeSM = PTC_SM_TOUCH_OUT_FLT;
     }
@@ -976,7 +980,7 @@ void ptc_start_conversion(cap_sensor_t *node) {
   
   node->state.win_comp = 0;
   
-  uint8_t analogGain = PTC_GAIN_MAX;              // Max GAIN when not yet calibrated
+  uint8_t analogGain = PTC_GAIN_1;              // x1 GAIN when not yet calibrated
   if (node->stateMachine != PTC_SM_NOINIT_CAL) {
     analogGain = node->hw_gain_ovs / 16;  // Div is faster then >>4 as gcc expands the variable to word
   }
@@ -1037,7 +1041,7 @@ void ptc_start_conversion(cap_sensor_t *node) {
   #endif
 
   pPTC->COMP = node->hw_compCaps;
-  pPTC->AGAIN = analogGain;
+  pPTC->AGAIN = ptc_again_lut[analogGain];
   pPTC->CTRLB = node->hw_gain_ovs & 0x0F;
   pPTC->RSEL = node->hw_rsel_presc / 16;
 
@@ -1098,7 +1102,6 @@ void ptc_eoc(void) {
     return;
   }
 
-
   //uint8_t flags = pPTC->INTFLAGS; // save the flags before they get cleared by RES read
   uint16_t rawVal =  pPTC->RES;   // clears ISR flags
   uint8_t oversampling = pCurrentNode->hw_gain_ovs  & 0x0F;
@@ -1116,7 +1119,6 @@ void ptc_eoc(void) {
       pPTC->CTRLE = ADC_WINCM_ABOVE_gc;
     }
   } else {
-    pPTC->CTRLA = 0x00;
     ptc_start_conversion(pCurrentNode->nextNode);
   }
 }

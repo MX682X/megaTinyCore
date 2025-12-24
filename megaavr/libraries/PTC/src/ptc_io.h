@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-#include "ptc_types.h"
 
 #if defined (__PTC_Tiny__)
 
@@ -47,7 +46,7 @@ typedef struct PTC_struct {
   _WORDREGISTER(reserved_5);  /* +0x24 */
   _WORDREGISTER(XBM);         /* +0x26 amount of writeable bits depends on chip family */
   _WORDREGISTER(reserved_6);  /* +0x28 */
-  _WORDREGISTER(YBM);         /* +0x2A e.g. 0x3FFF (15 pins) for 1614 with only 6 PTC pins */
+  _WORDREGISTER(YBM);         /* +0x2A e.g. 0x3FFF (15 pins) for 1614 with only 6 PTC pins. Mirrored MUXPOS*/
   _WORDREGISTER(reserved_7);;  /* +0x2C */
 } PTC_t;
 
@@ -410,7 +409,7 @@ static const uint8_t ptc_ch_to_pin [] = {
   PORTC_ISC(5),   // 20 pin parts: writing to this location will have no effect, but likely pre-filtered by PIN_TO_PTC anyway
 
   PORTB_ISC(5),    /* X12 / Y12 */
-  PORTB_ISC(6),
+  PORTB_ISC(4),
   #endif
   #endif
 };
