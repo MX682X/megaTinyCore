@@ -39,20 +39,19 @@ There are some simple patterns that you can use with the CCL/Logic library to ge
 * [Appendix I: The giant table of clock division via CCL](Tricks_and_Tips.md#appendix-I-the-giant-table-of-clock-division-via-ccl)
   * [An alternate approach to generating clock signals](Tricks_and_Tips.md#an-alternate-approach-to-generating-clock-signals)
 ## Reordering inputs
-**THIS SECTION IGNORES THE MSB AND LSB OF THE TRUTH TABLE**
-There are four trivial variations on each of these with different behavior when all inputs are the same.
+**MOST OF THIS DISCUSSION (reordering) NEGLECTS THE MSB AND LSB, as the reordering behavior only effects the non-extremal values.**
 
+There are four variations on each of these with different behavior when all inputs are the same, as the behavior with all 1's or all 0's is independent of what order they are in.
 These are not relevant to reordering. Reordering is confusing enough as is (and it really shouldn't be, but our brains aren't wired well for this I don't think)
-
-TRUTH = 0bHGFEDCBA when IN0 is α, IN1 is β and IN2 is γ
 
 To get identical behavior:
 
-TRUTH = 0bHDFBGCEA when IN0 is γ, IN1 is β and IN2 is α - D and G, B and E swap
-TRUTH = 0bHFGEDBCA when IN0 is α, IN1 is γ and IN2 is β - G and F, B and C swap
-TRUTH = 0bHGDCFEBA when IN0 is γ, IN1 is α and IN2 is β - F and D, E and C swap
-TRUTH = 0bHFDBGECA when IN0 is β, IN1 is γ and IN2 is α - F->G->D->F rotate, and B->E->C->B rotate.
-TRUTH = 0bHDGCFBEA when IN0 is β, IN1 is α and IN2 is γ - F->D->G->F rotate, and B->C->E->B rotate.
+* TRUTH = 0bHGFEDCBA when IN0 is α, IN1 is β and IN2 is γ
+* TRUTH = 0bHDFBGCEA when IN0 is γ, IN1 is β and IN2 is α - D and G, B and E swap
+* TRUTH = 0bHFGEDBCA when IN0 is α, IN1 is γ and IN2 is β - G and F, B and C swap
+* TRUTH = 0bHGDCFEBA when IN0 is γ, IN1 is α and IN2 is β - F and D, E and C swap
+* TRUTH = 0bHDGCFBEA when IN0 is β, IN1 is α and IN2 is γ - F→D→G→F rotate, and B→C→E→B rotate.
+* TRUTH = 0bHFDBGECA when IN0 is β, IN1 is γ and IN2 is α - F→G→D→F rotate, and B→E→C→B rotate.
 
 the highest and lowest bits do not change when reordering the inputs.
 
@@ -69,7 +68,13 @@ These are cases that treat all inputs equally (the logic formulas are hideous or
 | 0x68         |      3/6 | HIGH if exactly two inputs are HIGH
 | 0x7E         |      6/6 | HIGH in all cases except (potentially) when all three inputs are HIGH or all three inputs are LOW.
 
-A significant number of options come in sets of three. These reflect cases where two inputs are treated the same, while a third is treated differently
+A significant number of options come in sets of threes; these indicate:
+1. All of these have a logical formula of `( α [and|or] (β [opp] γ))`
+* `[opp]` is any binary logical operator where the order of the arguments doesn't matter; essentially all of them
+  * "Don't care" is an option, too.
+  * So the two 3/6 bit-set sets (A, and !A) fit the above 1 same 2 different pattern: 1 significant input, and two that are treated the same: they're disregarded.
+* It's worth noting that even whacky behavior - eg `A and !(B or C) or (!A and (B or C))` does conform to this.
+
 
 | TRUTH & 0x7E     | Bits set | Rationalization                                                                                               | Logic
 |------------------|----------|---------------------------------------------------------------------------------------------------------------|---------------
@@ -78,10 +83,10 @@ A significant number of options come in sets of three. These reflect cases where
 | 0x06, 0x12, 0x14 |      2/6 | HIGH IF one (not both) of two specified inputs is high, and the third is low.                                 | !A and  (B xor C)
 | 0x28, 0x48, 0x60 |      2/6 | HIGH IF specified input HIGH and one of the others HIGH A and                                                 |         (B  or C)
 | 0x18, 0x24, 0x42 |      2/6 | HIGH IF specified input HIGH and both others LOW, or specified input LOW and both others HIGH.                | (A and !(B  or C)) or (!A and  B and C)
-| 0x0E, 0x32, 0x54 |      3/6 | HIGH if specified input LOW.                                                                                  |        (!A)
-| 0x2A, 0x4C, 0x70 |      3/6 | HIGH if specified input HIGH.                                                                                 |         (A)
+| 0x0E, 0x32, 0x54 |      3/6 | HIGH if specified input LOW.                                                                                  |        (!A), DNC B/C
+| 0x2A, 0x4C, 0x70 |      3/6 | HIGH if specified input HIGH.                                                                                 |         (A), DNC B/C
 | 0x1E, 0x36, 0x56 |      4/6 | HIGH IF either a specific input is HIGH and the others low, or either of the others are high.                 | (A and !(B  or C)) or (!A and (B  or C))
-| 0x6A, 0x6C, 0x78 |      4/6 | HIGH if speciefied input, or both other inputs HIGH.                                                          |  A  or  (B and C)
+| 0x6A, 0x6C, 0x78 |      4/6 | HIGH if specified input, or both other inputs HIGH.                                                          |  A  or  (B and C)
 | 0x6E, 0x7A, 0x7C |      5/6 | HIGH UNLESS one specified input HIGH and others LOW.                                                          | !A  or  (B  or C)
 | 0x3E, 0x5E, 0x76 |      5/6 | HIGH UNLESS one specified input LOW and others HIGH.                                                          |  A  or !(B and C)
 
@@ -89,12 +94,46 @@ A significant number of options come in sets of three. These reflect cases where
 
 |                   TRUTH & 0x7E     | Bits set | Rationalization
 |------------------------------------|----------|--------------------------
-| 0x0A, 0x0C, 0x22, 0x30, 0x44, 0x50 |      2/6 | If one specified input HIGH and other specified input LOW, without specifying the last one. | (A  and !B)
-| 0x1A, 0x1C, 0x26, 0x34, 0x46, 0x52 |      3/6 | If specified input HIGH and other specified input LOW, or first input LOW and second HIGH   | (A  xor  B)
-| 0x2C, 0x38, 0x4A, 0x58, 0x62, 0x64 |      3/6 | Opposite of the second                                                                      | !(A xor  B)
-| 0x2E, 0x3A, 0x4E, 0x5C, 0x72, 0x74 |      4/6 | Opposite of first                                                                           | (!A  or  B)
+| 0x0A, 0x0C, 0x22, 0x30, 0x44, 0x50 |      2/6 | If one specified input HIGH and other specified input LOW, without specifying the last one. | (A  and !B) DNC C
+| 0x1A, 0x1C, 0x26, 0x34, 0x46, 0x52 |      3/6 | If specified input HIGH and other specified input LOW, or first input LOW and second HIGH   | (A  and B) or (B xor C)
+| 0x2C, 0x38, 0x4A, 0x58, 0x62, 0x64 |      3/6 | Opposite of the second                                                                      | (A and (B or C)) or (B and !C)
+| 0x2E, 0x3A, 0x4E, 0x5C, 0x72, 0x74 |      4/6 | Opposite of first                                                                           | A or (B and !C)
 
-Each of the preceeding 64 "middles" corresponds to 4 different truth tables. So 3E, 5E and 76
+In these cases, we have three distinct types of pins
+
+
+Each of the preceding 64 "middles" corresponds to 4 different truth tables. So 3E, 5E and 76
+
+### Other simple transforms
+(Convention of A being in 0, C being in 2)
+TRUTH = 0bJKLMNOPQ
+Change  | Truth change |
+--------|--------------|
+A → !A | 0bKJMLONQP   |
+B → !B | 0bLMJKPQNO   |
+C → !C | 0bNOPQJKLM   |
+
+```c++
+
+//A -> !A
+uint8_t newtruth = ((oldtruth & 0x55) << 1) | ((oldtruth & 0xAA) >> 1);
+
+//B -> !B
+uint8_t newtruth = ((oldtruth & 0x33) << 2) | ((oldtruth & 0xCC) >> 2);
+
+//C -> !C
+uint8_t newtruth = ((oldtruth & 0x0F) << 4) | ((oldtruth & 0xF0) >> 4);
+// Now this, if the compiler implements it, could end up looking hideous. There's actually a single instruction swap-nybble instruction, which is exposed by _swap()
+uint8_t newtruth = oldtruth;
+_swap(nettruth);
+//(this will not work correctly on 16-byte or 32-byte values; but arguably "swap the two nybbles" of a datatype with 4 or more of them is a malformed statement of intent)
+
+```
+
+### Brief comments on the high and low bit
+I will mention that it is *markedly harder than makes sense* to find patterns in these. 256 is enough that the quantity is too much to keep straight without structure, and doing it while not looking at the two most "relevant" bits of a typical truth table doesn't make it as much easier as I'd hoped. It's a lot harder to see the structure without the low and high bits (though that also drives home how important those bits are when you try to rationalize a given truth table, and convert it into a flow-chart or logic diagram or verbal description.)
+
+One interesting thing is that
 
 
 ## Examples
@@ -125,36 +164,38 @@ Faster than a bat out of hell, as long as the whole path is async (otherwise, yo
   * When the synchronizer or filter is used, an extra 2-3 clocks are needed. 2 clocks is much more likely t
 * Voltage dependence? Yes, yes there is.
 
-Propagation time (Tp) is in ns, and has been rounded to quarter-nanoseconds to drive home the limited accuracy to which we can calculate it. The freerunning oscillator isnt and should be considered approximate, as the small sample size (n = 1) is clearly not sufficient to judge if these specs are even representative, much less could be specified in general to that level of precision. With the values these take, I maintain that this is an appropriate approach.
+Propagation time (Tp) is in ns, and has been rounded to quarter-nanoseconds to drive home the limited accuracy to which we can calculate it. The freerunning oscillator isn't and should be considered approximate, as the small sample size (n = 1) is clearly not sufficient to judge if these specs are even representative, much less could be specified in general to that level of precision. With the values these take, I maintain that this is an appropriate approach.
 
 Current was also measured using a bench power supply. As the power supply in quetion is known to be of low quality (typical low cost chinese import bench supply). It was deemed sufficiently accurate for this purpose, though its readings were sometimes not reproducible, leading to uncertainty about whether the discrepancy was within the microcontroller or elsewheremember, this is a sample size of 1 tested under conditions governed by expediency, not precision. I did, however, set the cpu speed to 1 MHz to reach lower voltages and to make the control numbers more useful
 
+
 | Vdd   | F(case1) | F(case2) | Tp CCL   | Tp EVSYS | I (case1) | I (case2) | I(control) |Notes
-|-------|----------|----------|---------------------|-----------|-----------|------------|
-| 5.2   | 84.x MHz | 49 MHz   |  6.0     |  4.25    |    n/t    |    n/t    |     n/t    | *VUSB, current unmetered.
-| 5.0   | 83.x MHz | 48 MHz   |  6.0     |  4.50    |     17 mA |      6 mA |       0    |
-| 4.5   | 78 MHz   | 44 MHz   |  6.5     |  5.0     |     12 mA |      6    |       0    |
-| 4.0   | 71 MHz   | 40 MHz   |  7.0     |  5.5     |    7.5 mA |      6    |       0    |
-| 3.5   | 63 MHz   | 36 MHz   |  8.0     |  6.0     |      6 mA |      6    |       0    |
-| 3.3   | 59 MHz   | 34 MHz   |  8.5     |  6.25    |      6 mA |      5    |       0    |
-| 3.3   | 59 MHz   |  n/t     |  8.5     |  n/t     |     n/t   |     n/t   |      n/t   | *From 3.3v regulator (LDL1117), current unmetered
-| 3.0   | 53 MHz   | 30.5 MHz |  9.5     |  7.0     |      6 mA |      3    |       0    |
-| 2.5   | 42 MHz   | 24.1 MHz | 12.0     |  8.75    |      4 mA |      0    |       0    |  At 20 Mhz, 2.4V no longer works.Raising voltage again does not fix it, power cycle needed. That is not surprising
-| 2.0   | 29 MHz   | 16.6 MHz | 17.25    |  13.0    |      0 mA |      0    |       0    |  Current readings obviously of
-| 1.9   | 26.0 MHz | 15.0 MHz | 19.25    |  14.0    |      0 mA |      0    |       0    |  little value below here. But
-| 1.8   | 23.4 MHz | 13.4 MHz | 21.5     |  16.0    |      0 mA |      0    |       0    |  This is the minimum rated voltage for these parts, and the lowest BOD voltage
-| 1.7   | 20.5 MHz | 11.8 MHz | 24.5     |  18.0    |      0 mA |      0    |       0    |
-| 1.6   | 17.8 MHz | 10.1 MHz | 28.0     |  21.5    |      0 mA |      0    |       0    |
-| 1.5   | 15.1 MHz |  8.6 MHz | 33.0     |  25.0    |      0 mA |      0    |       0    |
+|-------|----------|----------|----------|----------|-----------|-----------|------------|----
+| 5.2   | 84.x MHz | 49 MHz   |  6.0     |  4.25    |    n/t    |    n/t    |     n/t    | (VUSB, current unmetered)
+| 5.0   | 83.x MHz | 48 MHz   |  6.0     |  4.50    |     17 mA |      6 mA |       0    | .
+| 4.5   | 78 MHz   | 44 MHz   |  6.5     |  5.0     |     12 mA |      6    |       0    | .
+| 4.0   | 71 MHz   | 40 MHz   |  7.0     |  5.5     |    7.5 mA |      6    |       0    | .
+| 3.5   | 63 MHz   | 36 MHz   |  8.0     |  6.0     |      6 mA |      6    |       0    | .
+| 3.3   | 59 MHz   | 34 MHz   |  8.5     |  6.25    |      6 mA |      5    |       0    | .
+| 3.3   | 59 MHz   |  n/t     |  8.5     |  n/t     |     n/t   |     n/t   |      n/t   | (From 3.3v regulator (LDL1117), current unmetered)
+| 3.0   | 53 MHz   | 30.5 MHz |  9.5     |  7.0     |      6 mA |      3    |       0    | .
+| 2.5   | 42 MHz   | 24.1 MHz | 12.0     |  8.75    |      4 mA |      0    |       0    | At 20 Mhz, 2.4V no longer works.Raising voltage again does not fix it, power cycle needed. That is not surprising
+| 2.0   | 29 MHz   | 16.6 MHz | 17.25    |  13.0    |      0 mA |      0    |       0    | Current readings obviously of
+| 1.9   | 26.0 MHz | 15.0 MHz | 19.25    |  14.0    |      0 mA |      0    |       0    | little value below here. But
+| 1.8   | 23.4 MHz | 13.4 MHz | 21.5     |  16.0    |      0 mA |      0    |       0    | This is the minimum rated voltage for these parts, and the lowest BOD voltage
+| 1.7   | 20.5 MHz | 11.8 MHz | 24.5     |  18.0    |      0 mA |      0    |       0    | .
+| 1.6   | 17.8 MHz | 10.1 MHz | 28.0     |  21.5    |      0 mA |      0    |       0    | .
+| 1.5   | 15.1 MHz |  8.6 MHz | 33.0     |  25.0    |      0 mA |      0    |       0    | .
 | 1.4   | 12.3 MHz |  7.1 MHz | 40.75    |  29.75   |      0 mA |      0    |       0    | At least the CCL kept at it down to 1.4v, before hitting the power on reset threshold at 1.3V
 | 1.3   | 0 MHz    | 0 MHz    | n/a      | n/a      |      0 mA |      0 mA |       0 mA | Chip below POR threshold
+
 
 Conclusions:
 * Vdd has expected effect on CCL propagation delays on tinyAVR 2-series
 * Turning off all port input buffers had no effect on the CCL's performance. Negligible impact on current, but 1 mA is huge in powerdown.
 * Why was current under control conditions (identical except CCL configured to not oscillate) in all cases nil? Seems IDD @ 1 MHz active mode is < 1.0 mA?
   * At 1 MHz clock, when I had both functions activated at the same time (logic 0 and event 0 doing one output and logic 2 independently freerunning) at 5v Idd was 24 MHz, more than the sum of it's parts.
-  * No futher current measurements are to be made via this device, as I do not have sufficent confidence in the accuracy of the tool to draw conclusions. It may just suck at measuring current at the low end of it's range
+  * No further current measurements are to be made via this device, as I do not have sufficient confidence in the accuracy of the tool to draw conclusions. It may just suck at measuring current at the low end of it's range
   * That I also recorded 6 mA with no load connected at one point supports the theory that these current numbers are of dubious value.
   * Further evidence comes from the non-repeatable measurements of current at 5.0v during case 1, which was read as 12mA and 17 mA, both measurements could be repeated and got the same value. I cannot reconcile how, despite no firmware upload having occurred in the interim and conditions being unchanged,
 * Therefore, all current values reported above should be considered quantitatively meaningless, but the observed correlations are strong enough that we can still say some things about current.
@@ -162,11 +203,11 @@ Conclusions:
   * The CCL power consumption is insignificantwhen not transitioning.
   * Excess power consumption is mostly dependent on the frequency of pin transitions.
   * Excess power consumption was observed by misconfiguring a CCL in an arguably pathological way, typical applications of the CCL use very little power.
-* CCL propagation delay at 5V is arond 6.0 ns. EVSYS 4.25 ns.
+* CCL propagation delay at 5V is around 6.0 ns. EVSYS 4.25 ns.
   * Only about 50% higher at 3.3V
   * Between 3.0 and 1.9V, the propagation delay doubles.
 * Some general learnings about the parts:
-  * At room temperatiure, this 3224 specimen didn't quit working at 20 MHz (was repeated at 1 to get cleaner numbers to lower voltages) until vdd was below 2.5V, which is 0.2v below the stated minimum voltage for 10 MHz. Of course, all the CPU had to do was execute repeated rjmp .-2 instructions, but this once again prooves that these parts blow their specs out of the water at room temperatire
+  * At room temperatiure, this 3224 specimen didn't quit working at 20 MHz (was repeated at 1 to get cleaner numbers to lower voltages) until vdd was below 2.5V, which is 0.2v below the stated minimum voltage for 10 MHz. Of course, all the CPU had to do was execute repeated rjmp .-2 instructions, but this once again proves that these parts blow their specs out of the water at room temperatire
   * If voltage may droop and return without going to zero, USE BOD IF YOU WANT IT TO COME BACK CLEANLY FROM UNDERVOLTAGE EVENT!
 
 
@@ -180,13 +221,15 @@ The clocks have some counterintuitive behavior. First off, what do they and do t
   * The logic block itself
 
 ### Ugly graphic depicting above
-[Clock Domain Illustration][ClockDomains.png]
-
+![Clock Domain Illustration](ClockDomains.png "Clock Domain Illustration")
+### Annotated graphic from the datasheet re: feedback paths
+Highlighted in color below. No part announced, much less shipped, has had an odd number of LUTs. They're unlikely to start now.
+![Annotated block diagram](LUTFeedback.png "Annotated block diagram")
 ### The edge detector
 Sometimes you need a pulse when all you have is a level. This gets you there. The clock is involved because the resulting pulse is 1 CCL clock long (occasionally this is not long enough, since the CCL clock can be faster than the system clock, particularly on the EB, where you can clock the CCL from the PLL, or you may be using a very slow clock, and it could be troublesome how long it is.
 
 ### The ~programmable delay~ synchronizer/filter
-This is one of the really cool, repurposable features. The intended use is that you can use the synchronizer to take a 2 clock cycle delay to ensure clean transitions and prevent glitches, with the filter meant to provide a means of cleanly handling more substantial noise by requiring that the signal be unchanged for 4 CCL clocks before outputting it. One of these must be used forthe edge detector to work.
+This is one of the really cool, repurposable features. The intended use is that you can use the synchronizer to take a 2 clock cycle delay to ensure clean transitions and prevent glitches, with the filter meant to provide a means of cleanly handling more substantial noise by requiring that the signal be unchanged for 4 CCL clocks before outputting it. One of these must be used for the edge detector to work.
 
 I'd love to see longer delay option, (synchronize + delay with more stages and without filter I think would be the most fun...)
 
@@ -252,7 +295,7 @@ Of particular utility when:
   * Since on these parts, you also can't use either of the TCBs to generate PWM (the timers having, respectively, zero and one pin present, and the one pin is PA3, used by another PWM channel). LUT2 can output on PD6 (and TCD0 outputting on PD4 and PD5) and LUT3 has to go to an event channel and come out on PA6.
   * Thus, with a HF crystal for the clock, you can still get PWM on PA2, PA3, PA4, PA5, PA6 (via LUT0), PA7 (via LUT3 and EVSYS), PC3 (via LUT1), PD4 (TCD), PD5 (TCD), PD6 (via LUT2) = 10 pins, leaving only 3 non-power, non-programming pins - PC1, PC2 (which you'll probably use as a UART) and PD7 (can do PD6 instead at the cost of an event channel).
 * On a DA, or DB with the TCD PORTMUX erratum (most extant specimens), especially on low pincount parts where there's a lot of stuff with only it's default mux option.
-* When you attemt to find the pattern in the TCB and TCA1 PORTMUX options (there isn't one) and lose the ability to think rationally about pin assignment.
+* When you attempt to find the pattern in the TCB and TCA1 PORTMUX options (there isn't one) and lose the ability to think rationally about pin assignment.
   * Maybe it's contagious... look at the pinouts on classic AVRs.
 
 ### Out-of-phase PWM
@@ -310,20 +353,24 @@ Enable the synchronizer to get the analogous flip-flop.
 ### S-R latch
 
 INSEL:
-* X: Feedback
+* X: Clear (any input source)
 * Y: Set (any input source)
-* Z: Clear (any input source)
+* Z: Feedback
 
 LUT:
-* 000: 0
-* 001: 1
-* 010: 1
-* 011: 1
-* 100: 0
-* 101: 0
-* 110: Per application requirements - logic block is getting contradictroy signals
-* 111: Per application requirements - logic block is getting contradictroy signals
-Ergo: TRUTH = 0x0b??001110 = 0x07 (go low when told to go both directions), 0xC7 (go high when...) or 0x47 (don't change when...). Avoid 0x87 (Oscillate rapidly at an unpredictable speed when...)
+* 000: 0   - feedback is 0 and neither control asserted -> does nothing
+* 001: 0   - feedback is 0 and clear asserted -> does nothing
+* 010: 1   - feedback is 0 and set asserted. -> 1
+* 011: -   - Per app requirements. Currently a 0, forbidden state with both lines asserted.
+* 100: 1   - feedback is 1 and neither control asserted -> does nothing
+* 101: 0   - feedback is 1 but clear asserted -> 0
+* 110: 1   - feedback is 1. set asserted, does nothing. -> does nothing
+* 111: -   - Per app requirements. Currently a 1, forbidden state with both lines asserted.
+Ergo: TRUTH = 0x0b?101?100 = 0x54, 0x5C, 0xD4 or 0xDC
+
+It's clear that 0x5C is no good, unless you want it to oscillate at a very high rate when both control signals are high; you probably don't want that. The remaining ones have a simple relationship to each other
+
+0x54 will always go low in event of both controls being high, 0xDC will always go high, and 0xD4 will not change the output until one of the input signals is removed. Which one makes sense depends on your application and the kind of signals you can get access to easily.
 
 Clock: N/A for latch, anything except IN2 as clock as demanded by application for flipflop.
 
@@ -345,7 +392,9 @@ LUT:
 * 101: 0
 * 110: 1
 * 111: 1
-Ergo: TRUTH = 0xCB
+Ergo: TRUTH = 0xCB (corresponding to the 1...1 subtype of 0x4A above)
+
+Unlike the RS case, there is only one coherent
 
 Clock: N/A for latch, anything except IN2 as clock as demanded by application for flipflop.
 
@@ -495,16 +544,12 @@ Note that with sync/filter off, the delay is not zero, obviously, but the respon
 
 1. Pin input -> Event channel -> CCL -> Pin output
 2. Pin input -> CCL -> Pin output
-
-This was investigated a while back using the much more convenient sandbox of a LUT oscillator (set to invert it's own output with no sync/filter)
 3. CCL -> CCL -> CCL -> Pin output
 4. CCL -> Event channel -> CCL -> Pin output
 5. CCL output -> CCL -> Pin output
 6. CCL -> Event channel -> CCL -> CCL -> Pin output.
 
-In the second case, the idea was to exclude everything except the propagation time of the signal in the chip. It will oscillate, allowing a scope to be used to measure the frequency (hence the meaningful measure, the propagation delay). Note that bandwidth limiting needs to be off - scopes often are designed to attenuate signals above 20 MHz, and this is typically turned on by default. You usually want it on because it reduces the visibility of any high frequency noise that might be obscuring the signal, but not if you're looking at a signal above the ceiling (which this will be)).
-
-When I tested it, 3 (lut pair, odd one takes the feedback as input, even one takes LINK as input, one echoes input unchanges (TRUTH=2) and the other inverts it (TRUTH=1). and 4 (odd lut, feeding an event channel used as it's input) generated the same frequency iirc, but 5 (even lut inverting own output) resulted in output twice as fast. Variant 6 (non-paired, consecutive luts, ie, first stage on LUT2, second on LUT1. LUT1 can take output from LUT2 via link, but to get it's output back to LUT2 needs an event channel) had a third the frequency of variant 5. The frequency of variant 5 was in the area of 80-100 MHz (!!!), indicating a propagation time per stage of 10-12ns (depending on temperature - dF<sub>LUT OSC</sub>/dT is orders of magnitude larger than dF<sub>Int. 20 MHz OSC</sub>/dT). I do not know what the speed of cases 1 and 2 are - but I predict that t<sub>1</sub> = A t<sub>5</sub>, t<sub>2</sub> = (A + B)t<sub>5</sub>, and that the values of A, B are either (2, 1), (2,2) or (3,2), and I think it's 2, 1.
+In the second case, the idea was to exclude everything except the propagation time of the signal in the chip. It will oscillate, allowing a scope to be used to measure the frequency (hence the meaningful measure, the propagation delay). Note that bandwidth limiting needs to be off - scopes often are designed to attenuate signals above 20 MHz, and this is typically turned on by default. You usually want it on because it reduces the visibility of any high frequency noise that might be obscuring the signal, but not if you're looking at a signal in that range.
 
 ### 2 LUT edge detector for RISING *or* FALLING
 This generates a pulse two or four clocks long on either a rising *or* falling edge.
@@ -575,69 +620,72 @@ Generally, I would argue that if you're using more than 3 LUTs, you should consi
 |     8 |  8 | 4 | - |     FIRST |         - |    - |  - | - | - |         - |         - |  - | - | - |   - |    2 |      0 |         |
 |    12 | 12 | 4 | 8 |       ADD |     FIRST |    - |  - | - | - |         - |         - |  - | - | - |   - |    2 |      0 |         |
 |    16 | 16 | 8 | 8 |       ADD |     FIRST |    - |  - | - | - |         - |         - |  - | - | - |   - |    2 |      0 |         |
-|    20 | 16 | 8 | 8 |       ADD |       ADD |    - |  4 | 4 | - |     FIRST |         - |  - | - | - |   - |    3 |      1 |         |
-|    24 | 16 | 4 | 4 |      ADD2 |       ADD |    - |  8 | 8 | - |     FIRST |         - |  - | - | - |   - |    3 |      1 |         |
-|    28 | 16 | 8 | 8 |       ADD |       ADD |    - | 12 | 8 | 4 |       ADD |     FIRST |  - | - | - |   - |    4 |      0 |         |
+|    20 | 16 | 8 | 8 |       ADD |       ADD |    - |  4 | 4 | - |     FIRST |         - |  - | - | - |   - |    3 |      1 | No 0/1s |
+|    24 | 16 | 4 | 4 |      ADD2 |       ADD |    - |  8 | 8 | - |     FIRST |         - |  - | - | - |   - |    3 |      1 | No 0/1s |
+|    28 | 16 | 8 | 8 |       ADD |       ADD |    - | 12 | 8 | 4 |       ADD |     FIRST |  - | - | - |   - |    4 |      0 | No 0/1s |
 |    32 | 32 | 4 | 8 |       MUL |     FIRST |    - |  - | - | - |         - |         - |  - | - | - |   - |    2 |      0 |         |
-|    36 |  4 | - | 4 |        -  |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | ODD LOW |
-|    40 |  8 | - | 8 |        -  |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | ODD LOW |
-|    44 | 12 | 4 | 8 |       ADD |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    4 |      2 |         |
-|    48 | 16 | 8 | 8 |       ADD |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 |         |
-|    52 | 32 | 4 | 8 |       MUL |       ADD |    - | 16 | 4 | 4 |       MUL |      ADD4 |  4 | 4 | - | FST |    5 |      1 |         |
+|    36 |  4 | - | 4 |        -  |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | No 0/1s |
+|    40 |  8 | - | 8 |        -  |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | No 0/1s |
+|    44 | 12 | 4 | 8 |       ADD |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    4 |      2 | No 0/1s |
+|    48 | 16 | 8 | 8 |       ADD |       ADD |    - | 32 | 8 | 4 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 | No 0/1s |
+|    52 | 32 | 4 | 8 |       MUL |       ADD |    - | 16 | 4 | 4 |       MUL |      ADD4 |  4 | 4 | - | FST |    5 |      1 | Dx ONLY |
 |    64 | 64 | 8 | 8 |       MUL |     FIRST |    - |  - | - | - |         - |         - |  - | - | - |   - |    2 |      0 |         |
-|    68 |  4 | - | 4 |        -  |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | ODD LOW |
-|    72 |  4 | - | 8 |        -  |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | ODD LOW |
-|    76 |  4 | 4 | 8 |       ADD |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 |         |
-|    80 |  4 | 8 | 8 |       ADD |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 |         |
-|    84 | 64 | 8 | 8 |       MUL |       ADD |    - | 16 | 8 | 8 |       ADD |      ADD4 |  4 | 4 | - | FST |    5 |      1 |         |
-|    88 |  8 | 4 | 4 |       ADD |  ADD2MUL3 |    - |  * | 4 | 4 |       ADD |  ADD4MUL5 |  * | 4 | 4 |   - |    6 |      1 |         |
-|    96 |  8 | 4 | 4 |       ADD |       ADD |    - | 12 | 4 | 8 |       ADD |      MUL4 |  4 | 4 | - |   - |    5 |      1 |         |
-|   100 | 64 | 8 | 8 |       MUL |       ADD |    - | 32 | 4 | 8 |       MUL |      ADD4 |  4 | 4 | - |   - |    5 |      1 |         |
-|   108 | 12 | 4 | 8 |       ADD |  ADD2MUL3 |    - |  * | 4 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 4 | ADD |    6 |      1 |         |
-|   128 | 16 | 4 | 4 |      MUL2 |       MUL |    - |  8 | 8 | - |     FIRST |         - |  - | - | - |   - |    3 |      1 |         |
-|   140 | 12 | 4 | 8 |       ADD |       ADD |  128 | 16 | 8 | 8 |       ADD |       MUL |  8 | 4 | 4 | ADD |    6 |      0 |         |
-|   144 | 12 | 4 | 8 |       ADD |       MUL |    - | 12 | 4 | 8 |       ADD |     FIRST |  - | - | - |   - |    4 |      1 |         |
-|   152 |  8 | 4 | 4 |       ADD |  ADD2MUL3 |    - |  * | 4 | 4 |       ADD |  ADD4MUL5 |  * | 4 | 8 |   - |    6 |      1 |         |
-|   160 |  8 | 4 | 4 |       ADD |       MUL |    - | 12 | 4 | 8 |       ADD |      ADD4 |  4 | 8 | - |   - |    5 |      1 |         |
-|   172 | 12 | 4 | 8 |       ADD |  ADD2MUL3 |    - |  - | 4 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 8 |   - |    6 |      1 |         |
-|   192 | 16 | 8 | 8 |       ADD |       MUL |    - | 12 | 4 | 8 |       ADD |     FIRST |  - | - | - |   - |    4 |      1 |         |
-|   204 | 12 | 4 | 8 |       ADD |       ADD |  192 | 16 | 8 | 8 |       ADD |       MUL | 12 | 4 | 8 | ADD |    6 |      0 |         |
-|   208 | 16 | 8 | 8 |       ADD |  ADD2MUL3 |    - |  * | 8 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 4 |   - |    6 |      1 |         |
-|   224 | 32 | 4 | 8 |       MUL |       ADD |  192 | 16 | 8 | 8 |       ADD |       MUL | 12 | 4 | 8 | ADD |    6 |      0 |         |
-|   256 | 16 | 4 | 4 |       MUL |       MUL |    - | 16 | 4 | 4 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 |         |
-|   268 | 12 | 4 | 8 |       ADD |       ADD |  256 | 16 | 8 | 8 |       ADD |       MUL | 16 | 8 | 8 | ADD |    6 |      0 |         |
-|   288 | 12 | 4 | 8 |       ADD |       MUL |    - | 16 | 8 | 8 |       ADD |      ADD4 |  8 | 8 | - |   - |    5 |      1 |         |
-|   300 | 12 | 4 | 8 |       ADD |  ADD2MUL3 |    - |  * | 4 | 8 |       ADD |  ADD4MUL5 |  * | 8 | 8 |   - |    6 |      2 |         |
-|   336 | 16 | 8 | 8 |       ADD |  ADD2MUL3 |    - |  * | 8 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 8 |   - |    6 |      2 |         |
-|   384 | 16 | 8 | 8 |       ADD |       MUL |    - | 16 | 4 | 4 |       MUL |      ADD4 |  8 | 8 | - |   - |    5 |      1 |         |
-|   512 | 64 | 8 | 8 |       MUL |       ADD |    - | 16 | 8 | 8 |       ADD |      MUL4 |  4 | 4 | - |   - |    5 |      1 |         |
-|   576 | 12 | 4 | 8 |       ADD |       MUL |   48 | 32 | 4 | 8 |       MUL |       ADD | 16 | 4 | 4 | MUL |    6 |      2 |         |
-|   592 | 16 | 8 | 8 |       ADD |  ADD2MUL3 |    - |  * | 8 | 8 |       ADD |  ADD4MUL5 |  * | 8 | 8 |   - |    6 |      1 |         |
-|   640 | 16 | 4 | 4 |       MUL |       MUL |    - | 32 | 4 | 8 |       MUL |      ADD4 |  8 | 8 | - |   - |    5 |      2 |         |
-|   768 | 12 | 4 | 8 |       ADD |       MUL |   64 | 32 | 4 | 8 |       MUL |       ADD | 32 | 4 | 8 | MUL |    6 |      2 |         |
-|  1024 | 32 | 4 | 8 |       MUL |       MUL |    - | 32 | 4 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      2 |         |
-|  1088 | 16 | 4 | 4 |      MUL2 |       MUL |    - | 68 | 8 | 8 |       MUL |  ADD4MUL5 |  * | 8 | 4 | MUL |    5 |      3 |         |
-|  1152 | 12 | 4 | 8 |       ADD |       MUL |    - | 16 | 8 | 8 |       ADD |      MUL4 |  8 | 8 | - |   - |    5 |      1 |         |
-|  1280 | 16 | 4 | 4 |       MUL |       MUL |   80 | 16 | 4 | 4 |       MUL |       ADD | 64 | 8 | 8 | MUL |    6 |      2 |         |
-|  1536 | 16 | 8 | 8 |       ADD |       MUL |    - | 16 | 4 | 4 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 |         |
-|  2048 | 16 | 4 | 4 |       MUL |       MUL |    - | 32 | 4 | 8 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 |         |
-|  2304 | 32 | 4 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      ADD4 |  8 | 8 | - |   - |    5 |      2 |         |
-|  4096 | 64 | 8 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      2 |         |
-|  4608 | 64 | 8 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      ADD4 | 12 | 8 | 4 | ADD |    5 |      2 |         |
-|  8192 | 32 | 4 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 |         |
-| 16384 | 16 | 8 | 8 |       ADD |       MUL | 1024 | 32 | 4 | 8 |       MUL |       MUL | 32 | 4 | 8 | MUL |    6 |      2 |         |
-| 24576 | 12 | 4 | 8 |       ADD |       MUL | 2048 | 32 | 4 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      2 |         |
-| 32768 | 64 | 8 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 |         |
-| 65536 | 16 | 8 | 8 |       ADD |       MUL | 4096 | 64 | 8 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      3 |         |
-|131072 | 64 | 8 | 8 |       MUL |       MUL | 2048 | 32 | 4 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      3 |         |
-|262144 | 64 | 8 | 8 |       MUL |       MUL | 4096 | 64 | 8 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      3 |         |
+|    68 |  4 | - | 4 |        -  |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | No 0/1s |
+|    72 |  4 | - | 8 |        -  |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    3 |      1 | No 0/1s |
+|    76 |  4 | 4 | 8 |       ADD |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 | No 0/1s |
+|    80 |  4 | 8 | 8 |       ADD |       ADD |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 | No 0/1s |
+|    84 | 64 | 8 | 8 |       MUL |       ADD |    - | 16 | 8 | 8 |       ADD |      ADD4 |  4 | 4 | - | FST |    5 |      1 | Dx ONLY |
+|    88 |  8 | 4 | 4 |       ADD |  ADD2MUL3 |    - |  * | 4 | 4 |       ADD |  ADD4MUL5 |  * | 4 | 4 |   - |    6 |      1 | Dx ONLY |
+|    96 |  8 | 4 | 4 |       ADD |       ADD |    - | 12 | 4 | 8 |       ADD |      MUL4 |  4 | 4 | - |   - |    5 |      1 | Dx ONLY |
+|   100 | 64 | 8 | 8 |       MUL |       ADD |    - | 32 | 4 | 8 |       MUL |      ADD4 |  4 | 4 | - |   - |    5 |      1 | Dx ONLY |
+|   108 | 12 | 4 | 8 |       ADD |  ADD2MUL3 |    - |  * | 4 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 4 | ADD |    6 |      1 | Dx ONLY |
+|   128 | 16 | 4 | 4 |      MUL2 |       MUL |    - |  8 | 8 | - |     FIRST |         - |  - | - | - |   - |    3 |      1 | No 0/1s |
+|   140 | 12 | 4 | 8 |       ADD |       ADD |  128 | 16 | 8 | 8 |       ADD |       MUL |  8 | 4 | 4 | ADD |    6 |      0 | Dx ONLY |
+|   144 | 12 | 4 | 8 |       ADD |       MUL |    - | 12 | 4 | 8 |       ADD |     FIRST |  - | - | - |   - |    4 |      1 | No 0/1s |
+|   152 |  8 | 4 | 4 |       ADD |  ADD2MUL3 |    - |  * | 4 | 4 |       ADD |  ADD4MUL5 |  * | 4 | 8 |   - |    6 |      1 | Dx ONLY |
+|   160 |  8 | 4 | 4 |       ADD |       MUL |    - | 12 | 4 | 8 |       ADD |      ADD4 |  4 | 8 | - |   - |    5 |      1 | Dx ONLY |
+|   172 | 12 | 4 | 8 |       ADD |  ADD2MUL3 |    - |  - | 4 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 8 |   - |    6 |      1 | Dx ONLY |
+|   192 | 16 | 8 | 8 |       ADD |       MUL |    - | 12 | 4 | 8 |       ADD |     FIRST |  - | - | - |   - |    4 |      1 | No 0/1s |
+|   204 | 12 | 4 | 8 |       ADD |       ADD |  192 | 16 | 8 | 8 |       ADD |       MUL | 12 | 4 | 8 | ADD |    6 |      0 | Dx ONLY |
+|   208 | 16 | 8 | 8 |       ADD |  ADD2MUL3 |    - |  * | 8 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 4 |   - |    6 |      1 | Dx ONLY |
+|   224 | 32 | 4 | 8 |       MUL |       ADD |  192 | 16 | 8 | 8 |       ADD |       MUL | 12 | 4 | 8 | ADD |    6 |      0 | Dx ONLY |
+|   256 | 16 | 4 | 4 |       MUL |       MUL |    - | 16 | 4 | 4 |       MUL |     FIRST |  - | - | - |   - |    4 |      1 | No 0/1s |
+|   268 | 12 | 4 | 8 |       ADD |       ADD |  256 | 16 | 8 | 8 |       ADD |       MUL | 16 | 8 | 8 | ADD |    6 |      0 | Dx ONLY |
+|   288 | 12 | 4 | 8 |       ADD |       MUL |    - | 16 | 8 | 8 |       ADD |      ADD4 |  8 | 8 | - |   - |    5 |      1 | Dx ONLY |
+|   300 | 12 | 4 | 8 |       ADD |  ADD2MUL3 |    - |  * | 4 | 8 |       ADD |  ADD4MUL5 |  * | 8 | 8 |   - |    6 |      2 | Dx ONLY |
+|   336 | 16 | 8 | 8 |       ADD |  ADD2MUL3 |    - |  * | 8 | 8 |       ADD |  ADD4MUL5 |  * | 4 | 8 |   - |    6 |      2 | Dx ONLY |
+|   384 | 16 | 8 | 8 |       ADD |       MUL |    - | 16 | 4 | 4 |       MUL |      ADD4 |  8 | 8 | - |   - |    5 |      1 | Dx ONLY |
+|   512 | 64 | 8 | 8 |       MUL |       ADD |    - | 16 | 8 | 8 |       ADD |      MUL4 |  4 | 4 | - |   - |    5 |      1 | Dx ONLY |
+|   576 | 12 | 4 | 8 |       ADD |       MUL |   48 | 32 | 4 | 8 |       MUL |       ADD | 16 | 4 | 4 | MUL |    6 |      2 | Dx ONLY |
+|   592 | 16 | 8 | 8 |       ADD |  ADD2MUL3 |    - |  * | 8 | 8 |       ADD |  ADD4MUL5 |  * | 8 | 8 |   - |    6 |      1 | Dx ONLY |
+|   640 | 16 | 4 | 4 |       MUL |       MUL |    - | 32 | 4 | 8 |       MUL |      ADD4 |  8 | 8 | - |   - |    5 |      2 | Dx ONLY |
+|   768 | 12 | 4 | 8 |       ADD |       MUL |   64 | 32 | 4 | 8 |       MUL |       ADD | 32 | 4 | 8 | MUL |    6 |      2 | Dx ONLY |
+|  1024 | 32 | 4 | 8 |       MUL |       MUL |    - | 32 | 4 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      2 | No 0/1s |
+|  1088 | 16 | 4 | 4 |      MUL2 |       MUL |    - | 68 | 8 | 8 |       MUL |  ADD4MUL5 |  * | 8 | 4 | MUL |    5 |      3 | Dx ONLY |
+|  1152 | 12 | 4 | 8 |       ADD |       MUL |    - | 16 | 8 | 8 |       ADD |      MUL4 |  8 | 8 | - |   - |    5 |      1 | Dx ONLY |
+|  1280 | 16 | 4 | 4 |       MUL |       MUL |   80 | 16 | 4 | 4 |       MUL |       ADD | 64 | 8 | 8 | MUL |    6 |      2 | Dx ONLY |
+|  1536 | 16 | 8 | 8 |       ADD |       MUL |    - | 16 | 4 | 4 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 | Dx ONLY |
+|  2048 | 16 | 4 | 4 |       MUL |       MUL |    - | 32 | 4 | 8 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 | Dx ONLY |
+|  2304 | 32 | 4 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      ADD4 |  8 | 8 | - |   - |    5 |      2 | Dx ONLY |
+|  4096 | 64 | 8 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |     FIRST |  - | - | - |   - |    4 |      2 | No 0/1s |
+|  4608 | 64 | 8 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      ADD4 | 12 | 8 | 4 | ADD |    5 |      2 | Dx ONLY |
+|  8192 | 32 | 4 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 | Dx ONLY |
+| 16384 | 16 | 8 | 8 |       ADD |       MUL | 1024 | 32 | 4 | 8 |       MUL |       MUL | 32 | 4 | 8 | MUL |    6 |      2 | Dx ONLY |
+| 24576 | 12 | 4 | 8 |       ADD |       MUL | 2048 | 32 | 4 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      2 | Dx ONLY |
+| 32768 | 64 | 8 | 8 |       MUL |       MUL |    - | 64 | 8 | 8 |       MUL |      MUL4 |  8 | 8 | - |   - |    5 |      2 | Dx ONLY |
+| 65536 | 16 | 8 | 8 |       ADD |       MUL | 4096 | 64 | 8 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      3 | Dx ONLY |
+|131072 | 64 | 8 | 8 |       MUL |       MUL | 2048 | 32 | 4 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      3 | Dx ONLY |
+|262144 | 64 | 8 | 8 |       MUL |       MUL | 4096 | 64 | 8 | 8 |       MUL |       MUL | 64 | 8 | 8 | MUL |    6 |      3 | Dx ONLY |
 
 `*` - This column is cannot express a value for the two combined pair of LUTs LUTs in the case where one of them is added to the lower LUTs, and the whole thing multiplied by the other.
+
+`Dx ONLY` indicates that this is only possible on an AVR DA or DB-series part, because it requires 6 LUTs, and no other parts have yet had that.
+`No 0/1s` indicates that this is not possible on the tinyAVR 0-series or tinyAVR 1-series. It is possible on the megaAVR 0-series, tinyAVR 2-series, and all Dx-series and Ex-series parts.
 
 ### An alternate approach to generating clock signals
 1. Sacrifice the XCK pin of an unneeded USART. You must set the pin output.
 2. Configure that USART for synchronous mode, at a baud rate equal to the desired frequency.
 3. Use the event system USART generator.
-4. You now have a programmable clock source. Remember to read the [Serial](../../extras/REF_Serial.md) documentation on async mode, as it is a niche feature, it was decided to avoid compromising performance parameters of the popular UART for the less common USRT mode.
+4. You now have a programmable clock source. Remember to read the [Serial](../../extras/Ref_Serial.md) documentation on async mode, as it is a niche feature, it was decided to avoid compromising performance parameters of the popular UART for the less common USRT mode.
 
-This exploits the fact that the XCK output is always active - though the fractional baud rate generation is not enabled, allowing speeds of `F_CPU/(2 * BAUD[15:6]) ` `BAUD[15:6]` refers to the 10 high bits of BAUD (the lower ones cannot be used and must be written zero in synchronous mode. )
+This exploits the fact that the XCK output is always active - though the fractional baud rate generation is not enabled, allowing speeds of `F_CPU/(2 * BAUD[15:6])` `BAUD[15:6]` refers to the 10 high bits of BAUD (the lower ones cannot be used and must be written zero in synchronous mode. )

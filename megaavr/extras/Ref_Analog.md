@@ -29,50 +29,42 @@ Notes:
 3. No external reference on 0-series and 1-series below 16k.
 4. 16k (1+series) parts are blessed with a number a boons. One of them is a second ADC. I think the intent was to provide a way to approximate having a differential ADC by triggering both at once (well, one of the intents, another one was because the ADC0 is taken over by the PTC if that is in use.
 5. The Dx-series differential ADC is a bad joke. First: The maximum absolute value both voltages is V<sub>ref</sub>, above that, wrong results are returned. And there's no amplification other than what you can press the opamps into service as.
-  **Unsubstantiated and slanderous speculation** My theory is this: The dual ADC on the 1+ series was to get dual ADC field tested because even then they could see that the new ADC was going to be an ordeal. They figured they can get away with 1 generation of chips without explicit differential ADC, but they still needed a way for some friendly customers to be able to do something like a differential ADC reading - and they were going to have to dothat in the DX - I think the Dx-series parts's "differential mode" is equivalent to two single ended measurements and some simple math)
+  **Unsubstantiated and slanderous speculation** My theory is this: The dual ADC on the 1+ series was to get dual ADC field tested because even then they could see that the new ADC was going to be an ordeal. They figured they can get away with 1 generation of chips without explicit differential ADC, but they still needed a way to get the same effect for some major customer application
 6. This is a REAL differential ADC. Max V<sub>Ain</sub> = Vdd + .1 or .2V and for useful readings their difference must be smaller than VREF. The tiny2 has some mysterious tunables, proper tuning of which is unclear. Offset error is disappointingly high, which Microchip noticed and introduced sign chopping (and removed a mysterious tunable or two) in the EA series, which should help significantly.
 
 The differential ADC on the Dx-series is disappointing.
 
 
 ## Reference Voltages
-Analog reference voltage can be selected as usual using analogReference(). Supported reference voltages are listed below:
+Analog reference voltage can be selected as usual using analogReference(). Supported reference voltages are listed below. The references available on the Dx and Ex parts are chosen from the same list as the tiny2's got to pick from, but somehow they wound up in a different order on these parts. You should never have to use the numbers (though that's all those constants are), unless your code loses track of what reference it has selected
 In some cases the voltage determines the maximum ADC clock speed. Call analogReference() before analogClockSpeed() to ensure that the analog clock speed is appropriate when any of these apply:
 * You are switching between internal and external/VDD reference on an Ex/2-series
 * You are using the half volt reference on the 0/1-series, or switching from that to another reference
 * You are on a Dx-series with an external reference of less than 1.8V
 
 
- | tinyAVR (0/1)                           | Voltage | Minimum Vdd | Number | Notes |
- |-----------------------------------------|---------|-------------|--------|-------|
- | `VDD` (default)                         | Vcc/Vdd |           - |     16 | . |
- | `INTERNAL0V55`                          |  0.55 V |           - |      0 | ADC clock needs to be 100kHz to 260 kHz to get accurate results |
- | `INTERNAL1V1`                           |  1.10 V |           - |      1 | . |
- | `INTERNAL2V5`                           |  2.50 V |           - |      2 | . |
- | `INTERNAL4V3`                           |  4.30 V |           - |      3 | . |
- | `INTERNAL1V5`                           |  1.50 V |           - |      4 | . |
- | `EXTERNAL`                              |       - |           - |     32 | 1+series only |
+ | tinyAVR (0/1)                           | Voltage | Minimum Vdd | Number | Notes
+ |-----------------------------------------|---------|-------------|--------|-------
+ | `VDD` (default)                         | Vcc/Vdd |           - |     16 |
+ | `INTERNAL0V55`                          |  0.55 V |           - |      0 | ADC clock needs to be 100kHz to 260 kHz to get accurate results
+ | `INTERNAL1V1`                           |  1.10 V |           - |      1 |
+ | `INTERNAL2V5`                           |  2.50 V |           - |      2 |
+ | `INTERNAL4V3`                           |  4.30 V |           - |      3 |
+ | `INTERNAL1V5`                           |  1.50 V |           - |      4 |
+ | `EXTERNAL`                              |   < VDD |           - |     32 | 1+series only
 
- | tinyAVR (2-series)  or Ex-series        | Voltage | Minimum Vdd | Number | Notes |
- |-----------------------------------------|---------|-------------|--------|-------|
- | `VDD` (default)                         | Vcc/Vdd |             |      0 | VDD Ref works at 6 MHz CLK ADC! |
- | `INTERNAL1V024`                         | 1.024 V |      2.5* V |      4 | 10-bit reading with 1.025 ref gives apx.   1 mv/ADC count |
- | `INTERNAL2V048`                         | 2.048 V |      2.5  V |      5 | 12-bit reading with 2.048 ref gives apx. 0.5 mv/ADC count |
- | `INTERNAL4V096`                         | 4.096 V |      4.55 V |      7 | 12-bit reading with 4.096 ref gives apx.   1 mv/ADC count |
- | `INTERNAL2V500`                         | 2.500 V |      2.7  V |      6 | . |
- | `INTERNAL4V1` (alias of INTERNAL4V096)  | 4.096 V |      4.55 V |      7 | . |
- | `EXTERNAL`                              |       - |         Vdd |      2 | External ref works at 6 MHz CLK ADC! |
+ | tinyAVR (2-series)  or anything else    | Voltage | Minimum Vdd | # tiny2| # Dx    | Notes
+ |-----------------------------------------|---------|-------------|--------|---------|-------
+ | `VDD` (default)                         | Vcc/Vdd |             |      0 |       5 | Good to 6 MHz ADC clock on 2-series and Ex
+ | `INTERNAL1V024`                         | 1.024 V |      2.5* V |      4 |       0 | 10-bit reading with 1.025 ref gives apx.   1 mv/ADC count
+ | `INTERNAL2V048`                         | 2.048 V |      2.5  V |      5 |       1 | 12-bit reading with 2.048 ref gives apx. 0.5 mv/ADC count
+ | `INTERNAL4V096`                         | 4.096 V |      4.55 V |      7 |       2 | 12-bit reading with 4.096 ref gives apx.   1 mv/ADC count
+ | `INTERNAL2V500`                         | 2.500 V |      2.7  V |      6 |       3 |
+ | `INTERNAL4V1` (alias of INTERNAL4V096)  | 4.096 V |      4.55 V |      7 |       2 |
+ | `EXTERNAL`  (tiny2/Ex version)          |   < VDD |  VREF +0.5V |      2 |       - | External ref good to 6 MHz ADC clock on 2-series and Ex
+ | `EXTERNAL`  (Dx-series)                 | 1.0-1.8 |  VREF +0.5V |      - |       6 | Dx: CLK_ADC =< 500 kHz
+ | `EXTERNAL`  (Dx-series)                 | 1.8-VDD |  VREF +0.5V |      - |       6 | Dx: Normal limits apply (see this document for DxCore for details)
 
- | AVR Dx/Ex-series                        | Voltage | Minimum Vdd | Number | Notes |
- |-----------------------------------------|---------|-------------|--------|---------|
- | `VDD` (default)                         | Vcc/Vdd |             |      5 | . |
- | `INTERNAL1V024`                         | 1.024 V |      2.5* V |      0 | 10-bit reading with 1.025 ref gives apx.   1 mv/ADC count |
- | `INTERNAL2V048`                         | 2.048 V |      2.5  V |      1 | 12-bit reading with 2.048 ref gives apx. 0.5 mv/ADC count |
- | `INTERNAL4V096`                         | 4.096 V |      4.55 V |      2 | 12-bit reading with 4.096 ref gives apx.   1 mv/ADC count |
- | `INTERNAL2V500`                         | 2.500 V |      2.7  V |      3 | . |
- | `INTERNAL4V1` (alias of INTERNAL4V096)  | 4.096 V |      4.55 V |      2 | . |
- | `EXTERNAL`                              | >=1.0 V |         Vdd |      6 | Dx: CLK_ADC =< 500 kHz |
- | `EXTERNAL`                              | >=1.8 V |         Vdd |      6 | Dx: No CLK_ADC restriction |
 
  You can test like `if(getAnalogReference()==INTERNAL2V500)`, but if you try to say, print them, you just get a number. That's what is shown in the last column: contains the numerical value of the constants representing these references. Don't use those, then nobody will understand your code - including yourself in two weeks. However, if you are printing the results of `getAnalogReference()` or `getDACReference()`, these are the numbers you will see.
 
@@ -117,7 +109,6 @@ analogReference() as you know takes only a single argument, and the overhead of 
 ## Internal Sources
 In addition to reading from pins, you can read from a number of internal sources - this is done just like reading a pin, except the constant listed in the table below is used instead of the pin number:
 
-
 | AVR DA           | AVR DB            | AVR DD            | AVR EA           |
 |------------------|-------------------|-------------------|------------------|
 | `ADC_TEMPERATURE`| `ADC_VDDDIV10`    | `ADC_VDDDIV10`    | `ADC_VDDDIV10`   |
@@ -128,6 +119,7 @@ In addition to reading from pins, you can read from a number of internal sources
 | `ADC_DAC0`       | `ADC_DACREF2` *   | `ADC_VDDIO2DIV10` | `ADC_DAC0`       |
 |                  | `ADC_DAC0` *      |                   |                  |
 |                  | `ADC_VDDIO2DIV10` |                   |                  |
+
 
 | tinyAVR 0/1-series                     | tinyAVR 2-series                    |
 |----------------------------------------|-------------------------------------|
@@ -151,7 +143,7 @@ At least there's a plausible use of the DAC input: recognizing that the voltage 
 `?` The DD-series lists a "BGTEMPSENSE" option in preliminary material, but it was removed by launch. It is unclear if this was ever implemented or if it exists in the silicon.
 
 ### Measuring VDD and Temperature
-See [the example we give for very talkative implementation](../libraries/megaTinyCore/examples/ReadTempVcc/ReadTempVcc.ino) and the [megaTinyCore.h library](../libraries/megaTinycore/README.md) which provides ready-to-use function calls for these measurements.
+See [the example we give for very talkative implementation](../libraries/megaTinyCore/examples/readTempVcc/readTempVcc.ino) and the [megaTinyCore.h library](../libraries/megaTinyCore/README.md) which provides ready-to-use function calls for these measurements.
 
 
 #### Measuring VDD on 0/1-series
@@ -212,14 +204,14 @@ speed. This returns a `bool` - it is `true` if value is valid.
 
 This value is used for all analog measurement functions.
 
-| Part Series | Sample time<br/>(default)  | Conversion time | Total analogRead() time | Default SAMPLEN* | ADC clock sample time |
-|-------------|--------------|-----------------|-------------------------|-----------------|-----------------------|
-| Classic AVR |        12 us |           92 us |                  104 us | No such feature | 1.5                   |
-| 0/1-series  |        12 us |       8.8-10 us |              20.8-22 us |     7, 9, or 13 | 2 + SAMPLEN           |
-| Dx (10-bit) |   apx. 12 us |  approx.  10 us | Approximately  21-22 us |              14 | 2 + SAMPLEN           |
-| Dx (12-bit) |   apx. 12 us |  approx.  12 us | Approximately  23-24 us |              14 | 2 + SAMPLEN           |
-| 2-series    |  apx. 6.4 us |  approx. 5.6 us | Approximately     12 us |              15 | 1 + SAMPDUR           |
-| EA-series   |  apx. 6.4 us |  approx. 5.6 us | Approximately     12 us |              15 | 1 + SAMPDUR           |
+| Part Series | Sample time<br/>(default)  | Conversion time | Total analogRead() time | Default SAMPLEN* | ADC clock sample time
+|-------------|--------------|-----------------|-------------------------|-----------------|-----------------------
+| Classic AVR |        12 us |           92 us |                  104 us | No such feature | 1.5
+| 0/1-series  |        12 us |       8.8-10 us |              20.8-22 us |     7, 9, or 13 | 2 + SAMPLEN
+| Dx (10-bit) |   apx. 12 us |  approx.  10 us | Approximately  21-22 us |              14 | 2 + SAMPLEN
+| Dx (12-bit) |   apx. 12 us |  approx.  12 us | Approximately  23-24 us |              14 | 2 + SAMPLEN
+| 2-series    |  apx. 6.4 us |  approx. 5.6 us | Approximately     12 us |              15 | 1 + SAMPDUR
+| EA-series   |  apx. 6.4 us |  approx. 5.6 us | Approximately     12 us |              15 | 1 + SAMPDUR
 
 `*` The default samplen given above is the default that the core sets it to when the ADC is initialized. The hardware defaults to 0, giving a much shorter sampling time. Also, as shown above while it's called SAMPLEN on parts with that don't have the PGA, with the new ADC and accompanying register name reshuffle, that became SAMPDUR. SAMPLEN was the sole bitfienld in the SAMPCTRL on Dx, while SAMPDUR is the sole bitfield on the clearly named CTRLE register. I'm not sure how either of those differences made it through. If I were in the room at the time, I'd have let 'em have it, because you should never rename a register without good reason, and the renamed register should never be objectively worse than the previous one. In this case, there is no conceivable good reason, and the new register name (CTRLE I mean) is obviously worse, since it gives no indication of it's function, nor is it even located immediately after CTRLD.
 
@@ -228,12 +220,12 @@ On the 2-series, we are at least given some numbers: 8pF for the sample and hold
 ### (mTC/DxC) analogReadEnh(pin, res=ADC_NATIVE_RESOLUTION, gain=0)
 Enhanced `analogRead()` - Perform a single-ended read on the specified pin. `res` is resolution in bits, which may range from 8 to `ADC_MAX_OVERSAMPLED_RESOLUTION`. This maximum is 13 bits for 0/1-series parts, and 17 for 2-series. If this is less than the native ADC resolution, that resolution is used, and then it is right-shifted 1, 2, or 3 times; if it is more than the native resolution, the accumulation option which will take 4<sup>n</sup> samples (where `n` is `res` native resolution) is selected. Note that maximum sample burst reads are not instantaneous, and in the most extreme cases can take milliseconds. Depending on the nature of the signal - or the realtime demands of your application - the time required for all those samples may limit the resolution that is acceptable. The accumulated result is then decimated (rightshifted n places) to yield a result with the requested resolution, which is returned. See [Atmel app note AVR121](https://ww1.microchip.com/downloads/en/appnotes/doc8003.pdf) - the specific case of the new ADC on the Ex and tinyAVR 2-series is discussed in the newer DS40002200 from Microchip, but it is a rather vapid document). Alternately, to get the raw accumulated ADC readings, pass one of the `ADC_ACC_n` constants for the second argument where `n` is a power of 2 up to 64 (0/1-series), or up to 1024 (2-series). Be aware that the lowest bits of a raw accumulated reading should not be trusted.; they're noise, not data (which is why the decimation step is needed, and why 4x the samples are required for every extra bit of resolution instead of 2x). On 2-series parts *the PGA can be used for single ended measurements*. Valid options for gain on the 2-series are 0 (PGA disabled, default), 1 (unity gain - may be appropriate under some circumstances, though I don't know what those are), or powers of 2 up to 16 (for 2x to 16x gain). On AVR Dx and tinyAVR 0/1-series parts, the gain argument should be omitted or 0; these do not have a PGA.
 
-| Part Series | Max Acc.     | result trunc?   | Maximum acc+decimate | Max PGA gain  |
-|-------------|--------------|-----------------|----------------------|---------------|
-| 0/1-series  |   64 samples |  N/A            |             13 bits  | N/A - no PGA  |
-| Dx-series   |  128 samples |  16 bits max    |             15 bits  | N/A - no PGA  |
-| 2-series    | 1024 samples |  No             |             17 bits  | 0/1/2/4/8/16x |
-| EA-series   | 1024 samples |  No             |             17 bits  | 0/1/2/4/8/16x |
+| Part Series | Max Acc.     | result trunc?   | Maximum acc+decimate | Max PGA gain
+|-------------|--------------|-----------------|----------------------|---------------
+| 0/1-series  |   64 samples |  N/A            |             13 bits  | N/A - no PGA
+| Dx-series   |  128 samples |  16 bits max    |             15 bits  | N/A - no PGA
+| 2-series    | 1024 samples |  No             |             17 bits  | 0/1/2/4/8/16x
+| EA-series   | 1024 samples |  No             |             17 bits  | 0/1/2/4/8/16x
 
 **WARNING** trying to take 17-bit readings on a 2-series/EA-series will take a long time for each sample. If the sample is changing, the results will be garbage.
 **WARNING** Extreme attention is required to make the least significant bits meaningful, especially when oversampling and decimating to 17 bits. This means very careful hardware design. Otherwise, you will be very accurately measuring the noise and error sources. I am praying that the EA-series will have AVDD on a separate power domain and invite us to filter it further to improve analog stability. In any event, quality external ADC reference is recommended when high accuracy is required.
@@ -271,16 +263,16 @@ This, again, is easy to distinguish from an error code, as the error codes are c
 ### (mTC/DxC) analogClockSpeed(int16_t frequency = 0, uint8_t options = 0)
 The accepted options for frequency are -1 (reset ADC clock to core default, 1-1.35 MHz), 0 (make no changes - just report current frequency) or a frequency, in kHz, to set the ADC clock to.
 
-| Part series | F_ADCmin | F_ADCmax | Reference | Prescalers                  |
-|-------------|----------|----------|-----------|-----------------------------|
-| tinyAVR 0/1 | 100      | 250      | 0.55V     | 8 from 2 to 256             |
-| tinyAVR 0/1 | 200      | 1500     | All other | 8 from 2 to 256             |
-| tinyAVR 0/1 | 200      | 2000     | Not 0.55V | Must use 8-bit resolution   |
-| tinyAVR 2   | 300      | 6000     | Internal  | 16 from 2 to 64             |
-| tinyAVR 2   | 300      | 6000     | External  | 16 from 2 to 64             |
-| AVR Dx      | 125      | 2000     | All       | 14 from 2 to 256            |
-| AVR EA      | 300      | 3000     | Internal  | 16 from 2 to 64             |
-| AVR EA      | 300      | 6000     | External  | 16 from 2 to 64             |
+| Part series | F_ADCmin | F_ADCmax | Reference | Prescalers
+|-------------|----------|----------|-----------|-----------------------------
+| tinyAVR 0/1 | 100      | 250      | 0.55V     | 8 from 2 to 256
+| tinyAVR 0/1 | 200      | 1500     | All other | 8 from 2 to 256
+| tinyAVR 0/1 | 200      | 2000     | Not 0.55V | Must use 8-bit resolution
+| tinyAVR 2   | 300      | 6000     | Internal  | 16 from 2 to 64
+| tinyAVR 2   | 300      | 6000     | External  | 16 from 2 to 64
+| AVR Dx      | 125      | 2000     | All       | 14 from 2 to 256
+| AVR EA      | 300      | 3000     | Internal  | 16 from 2 to 64
+| AVR EA      | 300      | 6000     | External  | 16 from 2 to 64
 
 Values between 125 and 2000 are considered valid for Dx-series parts and Ex-series parts 300-3000 with internal reference, and 300-6000 with Vdd or external reference. The prescaler options are discrete, not continuous, so there are a limited number of possible settings (the fastest and slowest of which are often outside the rated operating range). The core will choose the highest frequency which is within spec, and which does not exceed the value you requested.
 
@@ -464,8 +456,6 @@ As of 2.5.12 (1.6.8) we will always disable and re-enable the ADC if touching LO
 **On most 2-series parts LOW_LAT mode is REQUIRED in order to use the PGA when not using an internal reference or measuring the DACREF!**
 
 **Disabling the ADC is REQUIRED for acceptable sleep power consumption on the 2-series!**
-
-**No word either way on the EA-series!**
 
 Lowlat mode is enabled by default for this reason, as well as to generally improve performance. Disabling the ADC will end the power consumption associated with it.
 

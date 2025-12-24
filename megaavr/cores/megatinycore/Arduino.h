@@ -314,6 +314,7 @@ void initVariant();
 void takeOverTCA0();
 void takeOverTCD0();
 
+uint8_t _getCurrentMillisTimer();
 
 
 
@@ -462,15 +463,15 @@ uint32_t microsecondsToMillisClockCycles(uint32_t microseconds);
  */
 #ifdef MILLIS_USE_TIMERD0
   #if (F_CPU == 20000000UL || F_CPU == 10000000UL ||F_CPU == 5000000UL)
-    #define millisClockCyclesPerMicrosecond() ((uint16_t)(20)) // this always runs off the 20MHz oscillator
-  #else
-    #define millisClockCyclesPerMicrosecond() ((uint16_t)(16))
+    #define millisClockCyclesPerMicrosecond() (20) // this always runs off the 20MHz oscillator
+  #else //16. 8, 4, 2, 1
+    #define millisClockCyclesPerMicrosecond() (16)
   #endif
 #else
-  #define millisClockCyclesPerMicrosecond() ((uint16_t)((F_CPU / 1000000UL)))
+  #define millisClockCyclesPerMicrosecond() ((F_CPU / 1000000UL))
 #endif
-#define millisClockCyclesToMicroseconds(__a__) ((uint32_t)(__a__ / millisClockCyclesPerMicrosecond()))
-#define microsecondsToMillisClockCycles(__a__) ((uint32_t)(__a__ * millisClockCyclesPerMicrosecond()))
+#define millisClockCyclesToMicroseconds(__a__) ((__a__ / millisClockCyclesPerMicrosecond()))
+#define microsecondsToMillisClockCycles(__a__) ((__a__ * millisClockCyclesPerMicrosecond()))
 
 /* Timers and Timer-like-things
  * These are used for two things: Identifying the timer on a pin in
@@ -515,8 +516,8 @@ uint32_t microsecondsToMillisClockCycles(uint32_t microseconds);
 #define TIMERB6         (0x26) // TCB6
 #define TIMERB7         (0x27) // TCB7
 #define TIMERD0         (0x40) // If any of these bits match it's potentially on TCD0
-#define DACOUT          (0x80) /// If the high bit is set, it;s either the DAC oone of the new timers.
-#define TIMERE0         (0x10) // I do not expect TCE and TCA to ever coexist on the same chip. TCE comes with WEX and the need for the PLL. Whould they put TCA's on a part that had the infrastructre for TCEs? Doubtful
+#define DACOUT          (0xF8) /// If the high bit is set, it;s either the DAC oone of the new timers.
+#define TIMERE0         (0x10) // I do not expect TCE and TCA to ever coexist on the same chip. TCE comes with WEX and the need for the PLL. Would they put TCA's on a part that had the infrastructre for TCEs? Doubtful
 #define TIMERE1         (0x08)
 #define TIMERF0         (0xA0)
 #define TIMERF1         (0xD0)
@@ -524,16 +525,17 @@ uint32_t microsecondsToMillisClockCycles(uint32_t microseconds);
  * For the millis timer, there's nothing weird here.
  * But the timer table constants contain more information than that for these. When user code interprets the timer table entries it is critical to do it right:
  *  1. If 0x40 is set, TCD0 can output here. bits 4 and 5 contain information on what channel, and bits 0-2 specify what the PORTMUX must be set to.
- *  2. If 0x20 us set, there is a TCB can output PWM there.
+ *  2. If there's a TCE/TCF, if 0x90 is set, it's TCE0, 0xA0 is TCE1,
+ *  2. If 0x20 is set, there is a TCB can output PWM there.
  *    2a. If 0x20 is set, check 0x10 - if that's set, it's the alt pin mapping. This is currently not returned by the table, and I assess it to be unlikely to be of use
  *  4. If 0x10 is set, it's a TCA0 pin. This is never used in the timer table, but digitalPinToTimerNow() can return it.
  *  5. If 0x08 is set, it's a TCA1 pin. This is never used in the timer table, but digitalPinToTimerNow() can return it.
  * Ergo, use bitwise ands
  */
 
-#define TIMERRTC        (0x90) // RTC with internal osc
-#define TIMERRTC_XTAL   (0x91) // RTC with crystal
-#define TIMERRTC_CLK    (0x92) // RTC with ext clock
+#define TIMERRTC        (0xF0) // RTC with internal osc
+#define TIMERRTC_XTAL   (0xF1) // RTC with crystal
+#define TIMERRTC_CLK    (0xF2) // RTC with ext clock
 
 #if !defined(MEGATINYCORE)
   /* Not used in table */
@@ -569,7 +571,7 @@ uint32_t microsecondsToMillisClockCycles(uint32_t microseconds);
 // 0b01MC 0mmm - the 3 lowest bits refer to the PORTMUX.
 //                            Remrmbr, this is the DX version of this
 //                            bit C specifies whether it's channel A (0) or B (1). If M is 1 it is WOC outputting chan A or WOB outputting D.
-//                            WOD outputting A or WOC outputting B is not supported by the core (though tyhe hardeware supports it, it imposes overhead on lots of people to benefit very very feww.
+//                            WOD outputting A or WOC outputting B is not supported by the core (though they hardeware supports it, it imposes overhead on lots of people to benefit very very feww.
 //                            WOB outputting A or WOA outputting B is not supported by the hardware.
 //
 //                            Hence, PORTMUX.TCDROUTEA == (timer table entry) & (0x07)
@@ -608,16 +610,24 @@ uint32_t microsecondsToMillisClockCycles(uint32_t microseconds);
   #define TIMERD0_7WOB      (0x57) // hypothetical TCD0 WOB ALT7
   #define TIMERD0_7WOC      (0x67) // hypothetical TCD0 WOC ALT7
   #define TIMERD0_7WOD      (0x77) // hypothetical TCD0 WOD ALT7
+  /* 0x01xx 1xxx for potential futyre TCD1 */
 
-
-  #define TIMERE0_MUX0      (0x90) // TCE/WEX mux
-  #define TIMERE0_MUX1      (0x91) // TCE/WEX mux
-  #define TIMERE0_MUX2      (0x92) // TCE/WEX mux
-  #define TIMERE0_MUX3      (0x93) // TCE/WEX mux
-  #define TIMERE0_MUX4      (0x94) // TCE/WEX mux
-  #define TIMERE0_MUX5      (0x95) // TCE/WEX mux
-  #define TIMERE0_MUX6      (0x96) // Hypothetical TCE/WEX mux
-  #define TIMERE0_MUX7      (0x97) // Hypothetical TCE/WEX mux
+  #define TIMERE0_MUX0      (0x90) // TCE/WEX mux PORTA
+  #define TIMERE0_MUX1      (0x91) // TCE/WEX mux PORTB (TBA)
+  #define TIMERE0_MUX2      (0x92) // TCE/WEX mux PORTC
+  #define TIMERE0_MUX3      (0x93) // TCE/WEX mux PORTD
+  #define TIMERE0_MUX4      (0x94) // TCE/WEX mux PORTE
+  #define TIMERE0_MUX5      (0x95) // TCE/WEX mux PORTF
+  #define TIMERE0_MUX6      (0x96) // TCE/WEX mux PORTG (TBA)
+  #define TIMERE0_MUX7      (0x97) // TCE/WEX mux (TBA)
+  #define TIMERE0_MUX8      (0x98) // TCE/WEX mux PORTA2
+  #define TIMERE0_MUX9      (0x99) // TCE/WEX mux PORTC2
+  #define TIMERE0_MUX10     (0x9A) // TCE/WEX mux
+  #define TIMERE0_MUX11     (0x9B) // TCE/WEX mux
+  #define TIMERE0_MUX12     (0x9C) // TCE/WEX mux
+  #define TIMERE0_MUX13     (0x9D) // TCE/WEX mux
+  #define TIMERE0_MUX14     (0x9E) // TCE/WEX mux
+  #define TIMERE0_MUX15     (0x9F) // TCE/WEX mux
   /*
   // They might make a chip with 2 of them!
   #define TIMERE1_MUX0      (0xA0) // Hypothetical TCE/WEX mux
@@ -683,6 +693,19 @@ uint32_t microsecondsToMillisClockCycles(uint32_t microseconds);
   */
 
 #endif
+
+#define MILLIS_RUNNING      (0x00)
+#define MILLIS_PAUSED       (0x01)
+#define MILLIS_ON_ALT_TIMER (0x02)
+// MILLIS_TYPE
+#define MILLIS_TCA          (0x01)
+#define MILLIS_TCB          (0x02)
+#define MILLIS_TCD          (0x04)
+#define MILLIS_TCE          (0x05)
+#define MILLIS_TCF          (0x06)
+#define MILLIS_RTC          (0x20)
+
+
 __attribute__ ((noinline)) void _delayMicroseconds(unsigned int us);
 
 
